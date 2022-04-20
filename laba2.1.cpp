@@ -8,6 +8,8 @@
 GLuint VBO;
 static float scale = 0.0f;
 using namespace std;
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
 
 glm::mat4x4 RotMat (float RotateX, float RotateY, float RotateZ)
 {
@@ -76,14 +78,45 @@ public:
 								0.0f, m_scale.x, 0.0f, 0.0f,
 								0.0f, 0.0f, m_scale.x, 0.0f,
 									0.0f, 0.0f, 0.0f, 1.0f);
-		m_transformation = TranslationTrans * RotateTrans * ScaleTrans;
+		glm::mat4 ProjectionMatrix = InitPerspectiveProj();
+		m_transformation = ProjectionMatrix * TranslationTrans * RotateTrans * ScaleTrans;
 		return &m_transformation;
 	}
+
+	glm::mat4x4 InitPerspectiveProj() const
+	{
+		const float ar = m_persProj.Width / m_persProj.Height;
+		const float zNear = m_persProj.zNear;
+		const float zFar = m_persProj.zFar;
+		const float zRange = zNear - zFar;
+		const float tanHalfFOV = tanf(glm::radians(m_persProj.FOV / 2.0));
+		glm::mat4 ProjMat(1.0f / (tanHalfFOV * ar), 0.0f, 0.0f, 0.0f,
+							0.0f, 1.0f / tanHalfFOV, 0.0f, 0.0f,
+							0.0f, 0.0f, (-zNear - zFar) / zRange, 2.0f * zFar * zNear / zRange ,
+								0.0f, 0.0f, 1.0f, 0.0f);
+		return(ProjMat);
+	}
+	void SetPerspectiveProj(float FOV, float Width, float Height, float zNear, float zFar)
+	{
+		m_persProj.FOV = FOV;
+		m_persProj.Width = Width;
+		m_persProj.Height = Height;
+		m_persProj.zNear = zNear;
+		m_persProj.zFar = zFar;
+	}
+
 private:
 	glm::vec3 m_scale;
 	glm::vec3 m_worldPos;
 	glm::vec3 m_rotateInfo;
 	glm::mat4x4 m_transformation;
+	struct {
+		float FOV;
+		float Width;
+		float Height;
+		float zNear;
+		float zFar;
+	} m_persProj;
 };
 
 
@@ -116,9 +149,10 @@ void RenderSceneCB()
 
 	//glm::mat4x4 Matrix = transformMatrix * RotateMatrixZ * RotateMatrixY * ScaleMatrix;
 	Pipeline p;
-	p.Scale(sinf(scale * 0.1f), sinf(scale * 0.1f), sinf(scale * 0.1f));
-	p.WorldPos(0.0f, sinf(scale), 0.0f);
-	p.Rotate(sinf(scale) * 90.0f, sinf(scale) * 90.0f, sinf(scale) * 90.0f);
+	//p.Scale(sinf(scale * 0.1f), sinf(scale * 0.1f), sinf(scale * 0.1f));
+	p.WorldPos(0.0f, 0.0f, sinf(scale));
+	//p.Rotate(sinf(scale) * 90.0f, sinf(scale) * 90.0f, sinf(scale) * 90.0f);
+	p.SetPerspectiveProj(100.0f, WINDOW_WIDTH, WINDOW_HEIGHT, -100.0f, 100.0f);
 
 	glLoadMatrixf(reinterpret_cast<const float*>((p.GetTrans())));
 
